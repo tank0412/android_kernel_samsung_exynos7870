@@ -2174,7 +2174,9 @@ static int acct_stack_growth(struct vm_area_struct *vma, unsigned long size, uns
  */
 int expand_upwards(struct vm_area_struct *vma, unsigned long address)
 {
+        unsigned long gap_addr;
 	int error;
+        unsigned long stack_guard_gap;
 
 	if (!(vma->vm_flags & VM_GROWSUP))
 		return -EFAULT;
@@ -2268,6 +2270,8 @@ int expand_downwards(struct vm_area_struct *vma,
 				   unsigned long address)
 {
 	int error;
+        unsigned long gap_addr;
+        unsigned long stack_guard_gap;
 
 	/*
 	 * We must make sure the anon_vma is allocated
@@ -2285,6 +2289,7 @@ int expand_downwards(struct vm_area_struct *vma,
 	gap_addr = address - stack_guard_gap;
 	if (gap_addr > address)
 		return -ENOMEM;
+        struct vm_area_struct *prev;
 	prev = vma->vm_prev;
 	if (prev && prev->vm_end > gap_addr &&
 			(prev->vm_flags & (VM_WRITE|VM_READ|VM_EXEC))) {

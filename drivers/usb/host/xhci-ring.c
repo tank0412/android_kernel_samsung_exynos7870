@@ -280,13 +280,21 @@ void xhci_ring_cmd_db(struct xhci_hcd *xhci)
 	readl(&xhci->dba->doorbell[0]);
 }
 
+#if defined(CONFIG_USB_HOST_SAMSUNG_FEATURE)
+/* Must be called with xhci->lock held, releases and aquires lock back */
+static int xhci_abort_cmd_ring(struct xhci_hcd *xhci, unsigned long flags)
+#else
 static int xhci_abort_cmd_ring(struct xhci_hcd *xhci)
+#endif
 {
 	u64 temp_64;
 	int ret;
 
 	xhci_dbg(xhci, "Abort command ring\n");
-
+#if defined(CONFIG_USB_HOST_SAMSUNG_FEATURE)
+	reinit_completion(&xhci->cmd_ring_stop_completion);
+	temp_64 = xhci_read_64(xhci, &xhci->op_regs->cmd_ring);
+#else
 	temp_64 = xhci_read_64(xhci, &xhci->op_regs->cmd_ring);
 	xhci->cmd_ring_state = CMD_RING_STATE_ABORTED;
 #endif
@@ -352,6 +360,7 @@ static int xhci_abort_cmd_ring(struct xhci_hcd *xhci)
 		xhci_quiesce(xhci);
 		xhci_halt(xhci);
 		return -ESHUTDOWN;
+#endif
 	}
 
 	return 0;
@@ -1290,7 +1299,7 @@ void xhci_handle_command_timeout(unsigned long data)
 	xhci = container_of(to_delayed_work(work), struct xhci_hcd, cmd_timer);
 #else
 	xhci = (struct xhci_hcd *) data;
-
+#endif
 	/* mark this command to be cancelled */
 	spin_lock_irqsave(&xhci->lock, flags);
 	if (xhci->current_cmd) {
